@@ -1,6 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
+from datetime import datetime
 
 
 def normalize_img(image, label):
@@ -72,7 +73,8 @@ def plot_random_sample(dataset):
         plt.imshow([i for i in dataset.take(1)][0][0][random_index].numpy())
 
 
-def plot_fits(data_index_array, loss_array, params: list, power_or_exp: str):
+def plot_fits(data_index_array, loss_array, params: list, power_or_exp: str, experiment_number,
+              save="/home/sergiocalvo/Documents/qmul-internship/project/results_figs/"):
     """
     Plotting function that will plot the fitted curve (either exponential or power law) using a set of coefficients.
 
@@ -87,9 +89,17 @@ def plot_fits(data_index_array, loss_array, params: list, power_or_exp: str):
     :param power_or_exp: Parameter that determines wheter the data will be fitted with an exponential ("exp") or a power
     law curve.
     :type power_or_exp: str
+    :param experiment_number: Number of the experiment.
+    :type experiment_number: int
+    :param save: If not False, directory name to save the figures displaying the results of the experiments.
 
     :return: Corresponding plot.
     """
+    
+    # datetime object containing current date and time
+    now = datetime.now()
+    dt_string = now.strftime("%d_%m_%Y_-%H_%M_%S")
+    
     # plot the results
     plt.figure()
     plt.plot(data_index_array, loss_array, '.', label="data")
@@ -104,3 +114,6 @@ def plot_fits(data_index_array, loss_array, params: list, power_or_exp: str):
 
     plt.legend()
     plt.title("Fitted Curve")
+    
+    if save:
+        plt.savefig(save + dt_string + f"_experiment_{experiment_number}")
