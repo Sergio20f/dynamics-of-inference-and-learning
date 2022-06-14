@@ -117,3 +117,32 @@ def plot_fits(data_index_array, loss_array, params: list, power_or_exp: str, exp
     
     if save:
         plt.savefig(save + dt_string + f"_experiment_{experiment_number}")
+
+
+def img_to_pdf(sdir:str, out_name:str, output_path=False):
+    """
+    Helper function to put together all of the images in a folder into a single pdf file.
+    
+    :param sdir: Directory where the target images are allocated.
+    :type sdir: str
+    :param out_name: Desired filename for the output pdf document.
+    :type out_name: str
+    :param output_path: Boolean parameter. If True, the function will print the output path.
+    :type output_path: bool
+    
+    :return: None
+    """
+    
+    pdf = FPDF()
+    pdf.set_auto_page_break(0)
+    
+    img_list = [x for x in os.listdir(sdir) if x[0] != "."]
+    
+    for img in img_list:
+        pdf.add_page()
+        pdf.image(sdir+img)
+    
+    pdf.output(out_name+".pdf")
+    
+    if output_path:
+        print(os.getcwd())
