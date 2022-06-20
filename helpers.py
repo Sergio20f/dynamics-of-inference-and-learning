@@ -16,7 +16,10 @@ def normalize_img(image, label):
 
     :return: Normalised image array and its label as a tuple.
     """
-    return tf.cast(image, tf.float32) / 255., label
+    
+    new_img = tf.cast(image, tf.float32) / 255.
+        
+    return new_img, label
 
 
 def monoExp(x, m, t, b):
