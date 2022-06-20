@@ -19,7 +19,7 @@ class Data:
     train_data_prep(): generates a training dataset of normalised images and applies cache(), batch(), and prefetch().
     """
 
-    def __init__(self, name:str, batch_size=128):
+    def __init__(self, name:str, batch_size=128, norm_func=normalize_img, resize=False):
         """
         Initialises the class and creates the global variables.
 
@@ -27,9 +27,14 @@ class Data:
         :type name: str
         :param batch_size: integer value for the batch size, default is 128.
         :type batch_size: int
+        :param resize: Parameter corresponding to the new dimensions of the images contained in the dataset after resizing. If 
+                       False then the images in the dataset are not resized.
         """
         self.batch_size = batch_size
         self.name = name
+        self.norm_func = norm_func
+        self.resize = resize
+
         pass
 
     def test_data_prep(self):
@@ -40,21 +45,30 @@ class Data:
         :return: A tuple containing the validation data and test data respectively.
         """
         validation_data = tfds.load(self.name,
-                                    split="test[:50%]",
+                                    split="validation[:50%]",
                                     shuffle_files=True,
                                     as_supervised=True,
                                     with_info=False)
 
-        test_data = tfds.load(self.name, split="test[-50%:]",
+        test_data = tfds.load(self.name, split="validation[-50%:]",
                               shuffle_files=True,
                               as_supervised=True,
                               with_info=False)
 
-        # Map the normalisation function
-        validation_data = validation_data.map(normalize_img,
-                                              num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        test_data = test_data.map(normalize_img,
-                                  num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        if self.norm_func:
+            # Map the normalisation function
+            validation_data = validation_data.map(self.norm_func,
+                                                  num_parallel_calls=tf.data.experimental.AUTOTUNE)
+            test_data = test_data.map(self.norm_func,
+                                      num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        
+        if self.resize:
+            validation_data = validation_data.map(lambda image, label: (tf.image.resize(image, [self.resize[0], 
+                                                                          self.resize[1]]),
+                                                                          label))
+            
+            test_data = test_data.map(lambda image, label: (tf.image.resize(image, [self.resize[0], self.resize[1]]),
+                                                              label))
 
         # Batch the sets
         validation_data = validation_data.batch(self.batch_size)
@@ -68,7 +82,7 @@ class Data:
 
         return validation_data, test_data
 
-    def train_data_prep(self, dts: int, data_type="image", norm_func=None):
+    def train_data_prep(self, dts: int, data_type="image"):
         """
         Method that generates a training dataset of normalised images and applies cache(), batch(), and prefetch(). It
         uses the method "ReadInstruction()" from tfds.core to load the desired amount of data in each training
@@ -91,10 +105,13 @@ class Data:
                                         as_supervised=True,
                                         with_info=True)
 
-        if norm_func is not None:
-            train_data = train_data.map(norm_func,
+        if self.norm_func:
+            train_data = train_data.map(self.norm_func,
                                         num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
+        if self.resize:
+            train_data = train_data.map(lambda image, label: (tf.image.resize(image, [self.resize[0], self.resize[1]]), label))
+        
         # Prepare training data for fitting
         train_data = train_data.shuffle(ds_info.splits["train"].num_examples)
 
