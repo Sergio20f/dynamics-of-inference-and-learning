@@ -13,13 +13,14 @@ from helpers import normalize_img, monoExp, powerlaw, plot_fits
 from data_loading import Data
 
 
-def build_and_compile(input_shape=(28, 28, 1), optimizer=Adam, lr=0.001,
+def build_and_compile(model=None, input_shape=(28, 28, 1), optimizer=Adam, lr=0.001,
                       loss=SparseCategoricalCrossentropy(from_logits=True),
                       metrics=[tf.keras.metrics.SparseCategoricalAccuracy()]):
     """
     Function that builds the model instance and compiles it.
     In future work we will implement further customisation for the model architecture.
 
+    :param model: Tensorflow model. If "None" then the function will construct a default simple CNN with input_shape.
     :param input_shape: Input shape as a tuple for the first convolutional layer of the model. Default: (28, 28, 1).
     :type input_shape: tuple
     :param optimizer: Optimizer to compile the model.
@@ -31,22 +32,23 @@ def build_and_compile(input_shape=(28, 28, 1), optimizer=Adam, lr=0.001,
     :return: Compiled model for further use in training.
     """
 
-    # Build the model
-    model = tf.keras.Sequential([
-        Conv2D(filters=64, kernel_size=2, padding="same",
-               activation="relu", input_shape=input_shape),
-        MaxPooling2D(pool_size=2),
-        Dropout(0.3),
+    if model == None: # Default model
+        # Build the model
+        model = tf.keras.Sequential([
+            Conv2D(filters=64, kernel_size=2, padding="same",
+                    activation="relu", input_shape=input_shape),
+            MaxPooling2D(pool_size=2),
+            Dropout(0.3),
 
-        Conv2D(filters=32, kernel_size=2, padding="same", activation="relu"),
-        MaxPooling2D(pool_size=2),
-        Dropout(0.3),
+            Conv2D(filters=32, kernel_size=2, padding="same", activation="relu"),
+            MaxPooling2D(pool_size=2),
+            Dropout(0.3),
 
-        Flatten(),
-        Dense(256, activation="relu"),
-        Dropout(0.5),
-        Dense(10)
-    ])
+            Flatten(),
+            Dense(256, activation="relu"),
+            Dropout(0.5),
+            Dense(10)
+        ])
 
     # Compile the model
     model.compile(optimizer=optimizer(lr),
@@ -137,7 +139,7 @@ def training_fit_loop(train_data_name: str, data_step: int, n: int, N=1, start_d
 
         for i in range(n):
             data_size = int(start_data + i * data_step) # Adapts the size of the training dataset for each iteration
-            train_data = data.train_data_prep(dts=data_size, norm_func=normalize_img)
+            train_data = data.train_data_prep(dts=data_size)
 
             lossval = step_train(model, train_data, test_data, validation_data, dts=data_size)
 
