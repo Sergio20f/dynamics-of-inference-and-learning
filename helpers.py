@@ -1,7 +1,13 @@
+import shutil
+from fpdf import FPDF
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
+import os
+import json
+import random
+import matplotlib.image as mpimg
 
 
 def normalize_img(image, label):
@@ -149,3 +155,75 @@ def img_to_pdf(sdir:str, out_name:str, output_path=False):
     
     if output_path:
         print(os.getcwd())
+
+
+def get_labels(label_path):
+    """
+    Accepts a label path (in the form of a JSON) and returns the file
+    as a Python object.
+    """
+    with open(label_path) as f:
+        return json.load(f)
+
+
+def copy_images(parent_folder, new_subset, original_path, dataset, labels_path, target_labels):
+    """
+    Copies images from a set of target classes into a new folder in order to create a sub-dataset from an already
+    existing dataset.
+
+    :param parent_folder: original folder where the dataset is located and the new dataset will be allocated.
+    :type parent_folder: str
+    :param new_subset: name of the new folder where the subset will be allocated within parent_folder.
+    :type new_subset: str
+    :param original_path: path inside the parent_folder where the parent dataset is located.
+    :type original_path: str
+    :param dataset: Train, test, validation, ...
+    :type dataset: list
+    :param labels_path: path where classes.txt is allocated (normally .../meta)
+    :type labels_path: str
+    :param target_labels: List of target labels to copy.
+    :type target_labels: list
+    """
+
+    print(f"\nUsing {dataset} labels...")
+    labels = get_labels(labels_path + dataset + ".json")
+
+    for i in target_labels:
+        # Make target directory
+        os.makedirs(parent_folder + "/" + new_subset + "/" + dataset + "/" + i, exist_ok=True)
+
+        # Get the target classes
+        moved_img = []
+        for j in labels[i]:
+            og_path = parent_folder + original_path + j + ".jpg"
+            new_path = parent_folder + "/" + new_subset + "/" + dataset + "/" + j + ".jpg"
+
+            # Copy images from the original path to our new path
+            shutil.copy2(og_path, new_path)
+            moved_img.append(new_path)
+
+        print(f"Copied {len(moved_img)} images from {dataset} dataset {i} class...")
+
+
+def view_three_images(target_dir, target_class):
+    """
+    Selects three random image  from target_class in target_dir.
+
+    Requires target_dir to be in format:
+        target_dir
+                 |target_class_1
+                 |target_class_2
+                 |...
+    """
+    target_path = target_dir + target_class
+    filenames = os.listdir(target_path)
+    target_images = random.sample(filenames, 3)
+
+    # Plot images
+    plt.figure(figsize=(15, 6))
+    for i, img in enumerate(target_images):
+        img_path = target_path + "/" + img
+        plt.subplot(1, 3, i + 1)
+        plt.imshow(mpimg.imread(img_path))
+        plt.title(target_class)
+        plt.axis("off")
