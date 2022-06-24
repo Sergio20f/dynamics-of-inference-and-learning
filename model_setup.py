@@ -83,12 +83,13 @@ def step_train(model, train_data, test_data, validation_data, dts):
                         epochs=epochs,
                         validation_data=validation_data, verbose=0)
 
-    lossval = model.evaluate(test_data)[0]
+    loss_val = model.evaluate(test_data)[0]
 
-    return lossval
+    return loss_val
 
 
-def training_fit_loop(train_data_name: str, data_step: int, n: int, N=1, start_data=500, plot=True, save_df=False):
+def training_fit_loop(train_data_name: str, data_step: int, n: int, data_loading_params: tuple, N=1, start_data=500,
+                      plot=True, save_df=False):
     """
     Function that will put together the previously defined functions with the aim of generating a training loops with n
     iterations. It will also use the results of the training experiments and fit it to both an exponential and a power
@@ -101,6 +102,9 @@ def training_fit_loop(train_data_name: str, data_step: int, n: int, N=1, start_d
     :type data_step: int
     :param n: Number of iterations for training in each experiment.
     :param n: int
+    :param data_loading_params: Data loading parameters in specific order -> 1. name, 2. resize, 3. custom_dir,
+    4. val_or test
+    :type data_loading_params: tuple
     :param N: Number of experiments.
     :type N: int
     :param start_data: Determines the size of the initial training dataset from 0 (Default: 500).
@@ -113,6 +117,8 @@ def training_fit_loop(train_data_name: str, data_step: int, n: int, N=1, start_d
 
     :return: R² of the fit, list of the fitting parameters, dataframe with useful information from the fitting process.
     """
+    # Decompose data loading parameters
+    name, resize, custom_dir, validation_or_test = data_loading_params
 
     decay0 = []
     decay1 = []
@@ -126,8 +132,13 @@ def training_fit_loop(train_data_name: str, data_step: int, n: int, N=1, start_d
                                "PL: Mean power constant", "PL: Root of variance",
                                "PL: R² value of fit"])
 
-    data = Data(name="mnist")
-    validation_data, test_data = data.test_data_prep()
+    data = Data(name=name, resize=resize, custom_dir=custom_dir)
+
+    if custom_dir:
+        test_data = data.test_data_prep(validation_or_test=validation_or_test)
+        validation_data = test_data
+    else:
+        validation_data, test_data = data.test_data_prep(validation_or_test=validation_or_test)
 
     # Loop repeats the process for N experiments.
     for j in range(N):
@@ -141,10 +152,10 @@ def training_fit_loop(train_data_name: str, data_step: int, n: int, N=1, start_d
             data_size = int(start_data + i * data_step) # Adapts the size of the training dataset for each iteration
             train_data = data.train_data_prep(dts=data_size)
 
-            lossval = step_train(model, train_data, test_data, validation_data, dts=data_size)
+            loss_val = step_train(model, train_data, test_data, validation_data, dts=data_size)
 
             data_index.append(data_size)
-            loss_list.append(lossval)
+            loss_list.append(loss_val)
 
         # Transform the lists into arrays
         loss_array = np.array(loss_list)
