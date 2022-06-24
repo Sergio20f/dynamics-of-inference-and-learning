@@ -2,7 +2,6 @@
 ~/
 # Ignore result files
 results_df/
-results_figs/
 # .ipynb checkpoints and python cache
 *.ipynb_checkpoints
 __pychache__/
