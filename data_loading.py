@@ -9,8 +9,14 @@ class Data:
 
     Attributes:
     -----------
-    name (str) : tensorflow_datasets dataset name.
-    batch_size (int) = integer value for the batch size, default is 128.
+    - name (str) : tensorflow_datasets dataset name.
+    - batch_size (int) = integer value for the batch size, default is 128.
+    norm_function (function): Function that will be mapped across the datasets in order to normalise them.
+    - resize (False or tuple): If false there is no resizing. If a tuple is given as an input, the images across the set
+    will be resized (only works for datasets with images).
+    - custom_dir (False or str): If the user uses a default dataset from tfds then this parameter should be kept as
+    False. Otherwise, it should be a string containing the path to the custom dataset. This custom dataset should
+    contain folders called "train" and "test" with the corresponding data points.
 
     Methods:
     -----------
@@ -19,7 +25,7 @@ class Data:
     train_data_prep(): generates a training dataset of normalised images and applies cache(), batch(), and prefetch().
     """
 
-    def __init__(self, name:str, batch_size=128, norm_func=normalize_img, resize=False):
+    def __init__(self, name: str, batch_size=128, norm_func=normalize_img, resize=False, custom_dir=False):
         """
         Initialises the class and creates the global variables.
 
@@ -29,58 +35,30 @@ class Data:
         :type batch_size: int
         :param resize: Parameter corresponding to the new dimensions of the images contained in the dataset after resizing. If 
                        False then the images in the dataset are not resized.
+        :param norm_func: Function that will be mapped across the datasets in order to normalise them.
+        :type norm_func: function
+        :param resize: If false there is no resizing. If a tuple is given as an input, the images across the set
+                       will be resized (only works for datasets with images).
+        :param custom_dir: If the user uses a default dataset from tfds then this parameter should be kept as
+                           False. Otherwise, it should be a string containing the path to the custom dataset.
+                           This custom dataset should contain folders called "train" and "test" with the corresponding
+                           data points.
         """
         self.batch_size = batch_size
         self.name = name
         self.norm_func = norm_func
         self.resize = resize
+        self.custom_dir = custom_dir
+
+        if custom_dir:
+            builder = tfds.ImageFolder(custom_dir)
+            self.builder = builder
+
+            # Here for efficiency, otherwise we would be calling builder in each iteration of training_loop
+            train_data = self.builder.as_dataset(split="train", shuffle_files=True, as_supervised=True)
+            self.train_data = train_data
 
         pass
-
-    def test_data_prep(self):
-        """
-        Method that generates independent and different training and validation datasets of normalised images and
-        applies cache(), batch(), and prefetch().
-
-        :return: A tuple containing the validation data and test data respectively.
-        """
-        validation_data = tfds.load(self.name,
-                                    split="validation[:50%]",
-                                    shuffle_files=True,
-                                    as_supervised=True,
-                                    with_info=False)
-
-        test_data = tfds.load(self.name, split="validation[-50%:]",
-                              shuffle_files=True,
-                              as_supervised=True,
-                              with_info=False)
-
-        if self.norm_func:
-            # Map the normalisation function
-            validation_data = validation_data.map(self.norm_func,
-                                                  num_parallel_calls=tf.data.experimental.AUTOTUNE)
-            test_data = test_data.map(self.norm_func,
-                                      num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        
-        if self.resize:
-            validation_data = validation_data.map(lambda image, label: (tf.image.resize(image, [self.resize[0], 
-                                                                          self.resize[1]]),
-                                                                          label))
-            
-            test_data = test_data.map(lambda image, label: (tf.image.resize(image, [self.resize[0], self.resize[1]]),
-                                                              label))
-
-        # Batch the sets
-        validation_data = validation_data.batch(self.batch_size)
-        test_data = test_data.batch(self.batch_size)
-
-        # Cache and Prefetch sets
-        validation_data = validation_data.cache()
-        validation_data = validation_data.prefetch(tf.data.experimental.AUTOTUNE)
-        test_data = test_data.cache()
-        test_data = test_data.prefetch(tf.data.experimental.AUTOTUNE)
-
-        return validation_data, test_data
 
     def train_data_prep(self, dts: int, data_type="image"):
         """
@@ -98,22 +76,37 @@ class Data:
 
         :return: Training data.
         """
-        train_data, ds_info = tfds.load(self.name,
-                                        split=tfds.core.ReadInstruction("train",
-                                                                        from_=0, to=dts, unit="abs"),
-                                        shuffle_files=True,
-                                        as_supervised=True,
-                                        with_info=True)
+        if self.custom_dir:
+            # ReadInstruction is not yet supported for ImageFolder
+            # train_data = self.builder.as_dataset(split=tfds.core.ReadInstruction("train",
+            #                                                                     from_=0, to=dts, unit="abs"),
+            #                                     shuffle_files=True, as_supervised=True)
+
+            # Make dts play a role for custom datasets
+            train_data = self.train_data.take(dts)
+
+        else:
+            train_data, ds_info = tfds.load(self.name,
+                                            split=tfds.core.ReadInstruction("train",
+                                                                            from_=0, to=dts, unit="abs"),
+                                            shuffle_files=True,
+                                            as_supervised=True,
+                                            with_info=True)
 
         if self.norm_func:
             train_data = train_data.map(self.norm_func,
                                         num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
         if self.resize:
-            train_data = train_data.map(lambda image, label: (tf.image.resize(image, [self.resize[0], self.resize[1]]), label))
-        
+            train_data = train_data.map(
+                lambda image, label: (tf.image.resize(image, [self.resize[0], self.resize[1]]), label))
+
         # Prepare training data for fitting
-        train_data = train_data.shuffle(ds_info.splits["train"].num_examples)
+        if self.custom_dir:
+            train_data = train_data.shuffle(self.builder.info.splits["train"].num_examples)
+
+        else:
+            train_data = train_data.shuffle(ds_info.splits["train"].num_examples)
 
         if self.batch_size <= 0:
             print("Something is wrong with the batch size")
@@ -125,3 +118,62 @@ class Data:
             train_data = train_data.prefetch(tf.data.experimental.AUTOTUNE)
 
         return train_data
+
+    def test_data_prep(self, validation_or_test="validation"):
+        """
+        Method that generates independent and different training and validation datasets of normalised images and
+        applies cache(), batch(), and prefetch().
+
+        :return: A tuple containing the validation data and test data respectively.
+        """
+        if self.custom_dir:
+            test_data = self.builder.as_dataset(split="test", shuffle_files=True, as_supervised=True)
+
+        else:
+            validation_data, val_info = tfds.load(self.name,
+                                                  split=validation_or_test + "[:50%]",
+                                                  shuffle_files=True,
+                                                  as_supervised=True,
+                                                  with_info=True)
+
+            test_data, test_info = tfds.load(self.name, split=validation_or_test + "[-50%:]",
+                                             shuffle_files=True,
+                                             as_supervised=True,
+                                             with_info=True)
+            if self.norm_func:
+                # Map the normalisation function
+                validation_data = validation_data.map(self.norm_func,
+                                                      num_parallel_calls=tf.data.experimental.AUTOTUNE)
+
+            if self.resize:
+                validation_data = validation_data.map(lambda image, label: (tf.image.resize(image, [self.resize[0],
+                                                                                                    self.resize[1]]),
+                                                                            label))
+            # Batch the validation set
+            validation_data = validation_data.batch(self.batch_size)
+
+            # Cache and Prefetch validation set
+            validation_data = validation_data.cache()
+            validation_data = validation_data.prefetch(tf.data.experimental.AUTOTUNE)
+
+        if self.norm_func:
+            # Map the normalisation function
+            test_data = test_data.map(self.norm_func,
+                                      num_parallel_calls=tf.data.experimental.AUTOTUNE)
+
+        if self.resize:
+            test_data = test_data.map(lambda image, label: (tf.image.resize(image, [self.resize[0], self.resize[1]]),
+                                                            label))
+
+        # Batch the test set
+        test_data = test_data.batch(self.batch_size)
+
+        # Cache and Prefetch sets
+        test_data = test_data.cache()
+        test_data = test_data.prefetch(tf.data.experimental.AUTOTUNE)
+
+        if self.custom_dir:
+            return test_data
+
+        else:
+            return validation_data, test_data
