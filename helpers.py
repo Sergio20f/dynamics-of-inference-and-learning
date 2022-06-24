@@ -1,6 +1,7 @@
 import shutil
 from fpdf import FPDF
 import tensorflow as tf
+import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
@@ -227,3 +228,18 @@ def view_three_images(target_dir, target_class):
         plt.imshow(mpimg.imread(img_path))
         plt.title(target_class)
         plt.axis("off")
+
+
+def pickles_to_csv(folder_dir, target_folder):
+    """
+    folder_dir should contain just pickle files.
+    """
+    filenames = next(os.walk(folder_dir), (None, None, []))[2]  # [] if no file
+
+    df_final = pd.DataFrame([])
+
+    for file in filenames:
+        df = pd.read_pickle(folder_dir + file)
+        df_final = pd.concat((df_final, df))
+
+    df_final.to_csv(target_folder)
