@@ -88,7 +88,7 @@ def step_train(model, train_data, test_data, validation_data, dts):
     return loss_val
 
 
-def training_fit_loop(train_data_name: str, data_step: int, n: int, data_loading_params: tuple, N=1, start_data=500,
+def training_fit_loop(model, train_data_name: str, data_step: int, n: int, data_loading_params: tuple, N=1, start_data=500,
                       plot=True, save_df=False):
     """
     Function that will put together the previously defined functions with the aim of generating a training loops with n
@@ -96,14 +96,15 @@ def training_fit_loop(train_data_name: str, data_step: int, n: int, data_loading
     law function determining which one is a better fit. Lastly, it will generate a dataframe with the results of each
     experiment with some interesting metrics to look at.
 
+    :param model: Tensorflow model to train. If None, then the function uses a default simple CNN.
     :param train_data_name: Name that the training data takes within tensorflow_datasets.
     :type train_data_name: str
     :param data_step: How many data points are gonna be added to the dataset after each training step.
     :type data_step: int
     :param n: Number of iterations for training in each experiment.
     :param n: int
-    :param data_loading_params: Data loading parameters in specific order -> 1. name, 2. resize, 3. custom_dir,
-    4. val_or test
+    :param data_loading_params: Data loading parameters in specific order -> 1. name, 2. batch_sie, 3. resize, 4. custom_dir,
+    5. val_or test
     :type data_loading_params: tuple
     :param N: Number of experiments.
     :type N: int
@@ -118,7 +119,7 @@ def training_fit_loop(train_data_name: str, data_step: int, n: int, data_loading
     :return: R² of the fit, list of the fitting parameters, dataframe with useful information from the fitting process.
     """
     # Decompose data loading parameters
-    name, resize, custom_dir, validation_or_test = data_loading_params
+    name, batch_size, resize, custom_dir, validation_or_test = data_loading_params
 
     decay0 = []
     decay1 = []
@@ -132,7 +133,7 @@ def training_fit_loop(train_data_name: str, data_step: int, n: int, data_loading
                                "PL: Mean power constant", "PL: Root of variance",
                                "PL: R² value of fit"])
 
-    data = Data(name=name, resize=resize, custom_dir=custom_dir)
+    data = Data(name=name, batch_size=batch_size, resize=resize, custom_dir=custom_dir)
 
     if custom_dir:
         test_data = data.test_data_prep(validation_or_test=validation_or_test)
@@ -143,7 +144,7 @@ def training_fit_loop(train_data_name: str, data_step: int, n: int, data_loading
     # Loop repeats the process for N experiments.
     for j in range(N):
 
-        model = build_and_compile()
+        model = build_and_compile(model=model)
 
         loss_list = []
         data_index = []
