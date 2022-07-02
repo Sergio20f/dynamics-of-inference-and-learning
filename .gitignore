@@ -6,4 +6,4 @@ results_df/
 *.ipynb_checkpoints
 __pychache__/
 # pdf documents
-#*.pdf
+*.pdf
