@@ -13,9 +13,7 @@ from helpers import normalize_img, monoExp, powerlaw, plot_fits
 from data_loading import Data
 
 
-def build_and_compile(model=None, input_shape=(28, 28, 1), optimizer=Adam, lr=0.001,
-                      loss=SparseCategoricalCrossentropy(from_logits=True),
-                      metrics=[tf.keras.metrics.SparseCategoricalAccuracy()]):
+def build_and_compile(input_shape, optimizer, loss, metrics, lr=0.001, model=None):
     """
     Function that builds the model instance and compiles it.
     In future work we will implement further customisation for the model architecture.
@@ -51,7 +49,7 @@ def build_and_compile(model=None, input_shape=(28, 28, 1), optimizer=Adam, lr=0.
         ])
 
     # Compile the model
-    model.compile(optimizer=optimizer(lr),
+    model.compile(optimizer=optimizer(lr, momentum=0.9), # Remove momentum if not SGD
                   loss=loss,
                   metrics=metrics)
 
@@ -88,7 +86,7 @@ def step_train(model, train_data, test_data, validation_data, dts, verbose):
     return loss_val
 
 
-def training_fit_loop(model, train_data_name: str, data_step: int, n: int, data_loading_params: tuple, N=1, start_data=500,
+def training_fit_loop(model, model_params: tuple, data_step: int, n: int, data_loading_params: tuple, N=1, start_data=500,
                       plot=True, save_df=False, verbose=0):
     """
     Function that will put together the previously defined functions with the aim of generating a training loops with n
@@ -97,13 +95,13 @@ def training_fit_loop(model, train_data_name: str, data_step: int, n: int, data_
     experiment with some interesting metrics to look at.
 
     :param model: Tensorflow model to train. If None, then the function uses a default simple CNN.
-    :param train_data_name: Name that the training data takes within tensorflow_datasets.
-    :type train_data_name: str
+    :param model_params: Parameters to feed build_and_compile(). Tuple elements must be in specific order -> 1. input_shape, 2.
+    optimizer, 3. loss, 4. metrics.
     :param data_step: How many data points are gonna be added to the dataset after each training step.
     :type data_step: int
     :param n: Number of iterations for training in each experiment.
     :param n: int
-    :param data_loading_params: Data loading parameters in specific order -> 1. name, 2. batch_sie, 3. resize, 4. custom_dir,
+    :param data_loading_params: Data loading parameters in specific order -> 1. name, 2. batch_size, 3. resize, 4. custom_dir,
     5. val_or test
     :type data_loading_params: tuple
     :param N: Number of experiments.
@@ -120,6 +118,7 @@ def training_fit_loop(model, train_data_name: str, data_step: int, n: int, data_
     """
     # Decompose data loading parameters
     name, batch_size, norm_func, resize, custom_dir, validation_or_test = data_loading_params
+    input_shape, optimizer, loss, metrics = model_params
 
     decay0 = []
     decay1 = []
@@ -146,12 +145,13 @@ def training_fit_loop(model, train_data_name: str, data_step: int, n: int, data_
     # Loop repeats the process for N experiments.
     for j in range(N):
 
-        model = build_and_compile(model=model)
-
         loss_list = []
         data_index = []
 
         for i in range(n):
+            # Define the model so it starts training from scratch
+            model = build_and_compile(model=model, input_shape=input_shape, optimizer=optimizer, loss=loss, metrics=metrics)
+            
             data_size = int(start_data + i * data_step) # Adapts the size of the training dataset for each iteration
             train_data = data.train_data_prep(dts=data_size)
 

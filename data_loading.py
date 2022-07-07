@@ -96,7 +96,7 @@ class Data:
         if self.norm_func:
             train_data = train_data.map(self.norm_func,
                                         num_parallel_calls=tf.data.experimental.AUTOTUNE)
-
+            
         if self.resize:
             train_data = train_data.map(
                 lambda image, label: (tf.image.resize(image, [self.resize[0], self.resize[1]]), label))
@@ -140,6 +140,7 @@ class Data:
                                              shuffle_files=True,
                                              as_supervised=True,
                                              with_info=True)
+            
             if self.norm_func:
                 # Map the normalisation function
                 validation_data = validation_data.map(self.norm_func,

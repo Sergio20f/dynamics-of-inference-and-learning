@@ -84,7 +84,7 @@ def plot_random_sample(dataset):
 
 
 def plot_fits(data_index_array, loss_array, params: list, power_or_exp: str, experiment_number,
-              save="/home/sergiocalvo/Documents/qmul-internship/project/results_figs/"):
+              save="/common/users/ap19121/dynamics-of-inference-and-learning/results_figs/"):
     """
     Plotting function that will plot the fitted curve (either exponential or power law) using a set of coefficients.
 
