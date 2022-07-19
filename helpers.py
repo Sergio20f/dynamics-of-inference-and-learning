@@ -9,6 +9,7 @@ import os
 import json
 import random
 import matplotlib.image as mpimg
+import yaml
 
 
 def normalize_img(image, label):
@@ -27,6 +28,14 @@ def normalize_img(image, label):
     new_img = tf.cast(image, tf.float32) / 255.
         
     return new_img, label
+
+
+def mask_to_categorical(image, mask):
+    image, mask = normalize_img(image, mask)
+    mask = tf.one_hot(tf.cast(mask, tf.int32), 10)
+    mask = tf.cast(mask, tf.float32)
+    
+    return image, mask
 
 
 def monoExp(x, m, t, b):
@@ -243,3 +252,17 @@ def pickles_to_csv(folder_dir, target_folder):
         df_final = pd.concat((df_final, df))
 
     df_final.to_csv(target_folder)
+
+
+def yaml_loader(filepath):
+    """Loads a yaml file"""
+    with open(filepath, "r") as file_descriptor:
+        data = yaml.load(file_descriptor, Loader=yaml.Loader)
+    
+    return data
+
+
+def yaml_dump(filepath, data):
+    """Dumps data to a yaml file"""
+    with open(filepath, "w") as file_descriptor:
+        yaml.dump(data, file_descriptor)

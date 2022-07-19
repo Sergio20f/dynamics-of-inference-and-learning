@@ -49,7 +49,7 @@ def build_and_compile(input_shape, optimizer, loss, metrics, lr=0.001, model=Non
         ])
 
     # Compile the model
-    model.compile(optimizer=optimizer(lr, momentum=0.9), # Remove momentum if not SGD
+    model.compile(optimizer=optimizer(lr),# momentum=0.9), # Remove momentum if not SGD
                   loss=loss,
                   metrics=metrics)
 
@@ -74,7 +74,7 @@ def step_train(model, train_data, test_data, validation_data, dts, verbose):
     :return: Validation loss of the model after training.
     """
 
-    epochs = int(240000 / dts) # 240000 tested constant appropriate for defining epochs
+    epochs = int(240000*4 / dts) # 240000 tested constant appropriate for defining epochs
 
     # Fit the model
     history = model.fit(train_data,
@@ -101,8 +101,8 @@ def training_fit_loop(model, model_params: tuple, data_step: int, n: int, data_l
     :type data_step: int
     :param n: Number of iterations for training in each experiment.
     :param n: int
-    :param data_loading_params: Data loading parameters in specific order -> 1. name, 2. batch_size, 3. resize, 4. custom_dir,
-    5. val_or test
+    :param data_loading_params: Data loading parameters in specific order -> 1. name, 2. batch_size, 3. norm_func, 4. resize, 5. 
+    custom_dir, 6. val_or test
     :type data_loading_params: tuple
     :param N: Number of experiments.
     :type N: int
@@ -151,12 +151,14 @@ def training_fit_loop(model, model_params: tuple, data_step: int, n: int, data_l
         for i in range(n):
             # Define the model so it starts training from scratch
             model = build_and_compile(model=model, input_shape=input_shape, optimizer=optimizer, loss=loss, metrics=metrics)
+            weights = model.get_weights()
             
             data_size = int(start_data + i * data_step) # Adapts the size of the training dataset for each iteration
             train_data = data.train_data_prep(dts=data_size)
 
             loss_val = step_train(model, train_data, test_data, validation_data, dts=data_size, verbose=verbose)
-
+            model.set_weights(weights)  
+            
             data_index.append(data_size)
             loss_list.append(loss_val)
 
