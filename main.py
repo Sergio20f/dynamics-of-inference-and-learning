@@ -19,19 +19,8 @@ from model_setup import training_fit_loop
 # Accessing config.yaml
 config = Config("config.yaml")
 
-# Defining the model
-base_model = tf.keras.applications.resnet50.ResNet50(include_top=False, weights=None)
-
-inputs = tf.keras.layers.Input(shape=(32, 32, 3), name="input_layer")
-x = base_model(inputs)
-x = tf.keras.layers.GlobalAveragePooling2D(name="global_average_pooling_layer")(x)
-outputs = tf.keras.layers.Dense(10, activation="softmax",
-                                name="output_layer")(x)
-
-model_0 = tf.keras.Model(inputs, outputs)
-
 # Training loop
-a = training_fit_loop(model=model_0,
+a = training_fit_loop(model=config.MODEL(input_shape=config.INPUT_SHAPE),
                       model_params=(config.INPUT_SHAPE, config.OPTIMIZER, config.LOSS, [config.METRICS]),
                       data_step=config.DATA_STEP,
                       n=config.N,

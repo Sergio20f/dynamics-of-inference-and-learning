@@ -4,6 +4,7 @@ loop:
     start_data: 8000
     verbose: 1
 model_params:
+    model_name: ResNet50
     input_shape: (32, 32, 3)
     optimizer: tf.keras.optimizers.Adam
     loss: tf.keras.losses.CategoricalCrossentropy()

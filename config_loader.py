@@ -2,6 +2,8 @@ import yaml
 import tensorflow as tf
 
 from helpers import *
+from models import *
+
 
 class Config:
 
@@ -26,6 +28,9 @@ class Config:
         self.VERBOSE = verbose
         
         # Model parameters
+        model = self.data["model_params"]["model_name"]
+        self.MODEL = eval(model)
+        
         input_shape = self.data["model_params"]["input_shape"]
         self.INPUT_SHAPE = eval(input_shape)
         
