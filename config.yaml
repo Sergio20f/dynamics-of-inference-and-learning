@@ -1,18 +1,19 @@
 loop:
-    data_step: 2000
+    data_step: 1000
     n: 20
-    start_data: 8000
+    start_data: 10000
     verbose: 1
+    epochs_cnt: 240000
 model_params:
-    model_name: ResNet50
-    input_shape: (32, 32, 3)
+    model_name: EfficientNetB0
+    input_shape: (256, 256, 3)
     optimizer: tf.keras.optimizers.Adam
-    loss: tf.keras.losses.CategoricalCrossentropy()
-    metrics: accuracy
+    loss: tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+    metrics: sparse_categorical_accuracy
 data_loading_params:
-    name: cifar10
+    name: custom
     batch_size: 128
-    norm_func: mask_to_categorical
-    resize: 0
-    custom_dir: 0
+    norm_func: normalize_img
+    resize: (256, 256)
+    custom_dir: 10_food_classes_all_data
     validation_or_test: test

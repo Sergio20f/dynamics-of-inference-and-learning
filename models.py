@@ -2,6 +2,25 @@ import tensorflow as tf
 
 
 # Add docstrings
+def david_cnn(input_shape):
+    model = tf.keras.Sequential([
+                tf.keras.layers.Conv2D(filters=64, kernel_size=2, padding="same",
+                                        activation="relu", input_shape=input_shape),
+                tf.keras.layers.MaxPooling2D(pool_size=2),
+                tf.keras.layers.Dropout(0.3),
+
+                tf.keras.layers.Conv2D(filters=32, kernel_size=2, padding="same", activation="relu"),
+                tf.keras.layers.MaxPooling2D(pool_size=2),
+                tf.keras.layers.Dropout(0.3),
+
+                tf.keras.layers.Flatten(),
+                tf.keras.layers.Dense(256, activation="relu"),
+                tf.keras.layers.Dropout(0.5),
+                tf.keras.layers.Dense(10)
+            ])
+    
+    return model
+
 # CNN tested for CIFAR-10
 def cnn_1(input_shape, len_classes=10, activation_1="relu", activation_2="softmax"):
     model = tf.keras.models.Sequential()

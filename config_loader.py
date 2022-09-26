@@ -27,6 +27,9 @@ class Config:
         verbose = self.data["loop"]["verbose"]
         self.VERBOSE = verbose
         
+        epochs_cnt = self.data["loop"]["epochs_cnt"]
+        self.EPOCHS_CNT = epochs_cnt
+        
         # Model parameters
         model = self.data["model_params"]["model_name"]
         self.MODEL = eval(model)
@@ -69,3 +72,6 @@ class Config:
         self.VALIDATION_OR_TEST = validation_or_test
         
         pass
+
+    
+config = Config("config.yaml")

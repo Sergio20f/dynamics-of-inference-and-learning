@@ -7,6 +7,7 @@ import scipy
 from scipy import optimize
 import pandas as pd
 from datetime import datetime
+from config_loader import config
 
 
 from helpers import normalize_img, monoExp, powerlaw, plot_fits
@@ -74,7 +75,7 @@ def step_train(model, train_data, test_data, validation_data, dts, verbose):
     :return: Validation loss of the model after training.
     """
 
-    epochs = int(240000*4 / dts) # 240000 tested constant appropriate for defining epochs
+    epochs = int(config.EPOCHS_CNT / dts) # 240000 tested constant appropriate for defining epochs //*4
 
     # Fit the model
     history = model.fit(train_data,
